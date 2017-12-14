@@ -12,7 +12,7 @@ from flask import request
 from flask_pymongo import PyMongo
 from pymongo import MongoClient
 
-
+from transaction import transaction_sv
 
 
 application = Flask(__name__)
@@ -24,12 +24,17 @@ str = "mongodb://" + mongo_server + ":" + mongo_port
 connection = MongoClient(str)
 db = connection.filesystem
 servers = db.servers
-AUTH_KEY = "17771fab5708b94b42cfd00c444b6eaa"
+server_transactions = transaction_sv()
+AUTH_KEY = "dnfsoeijrw93i09ndsn83irjfbsdu1q2"
 SERVER_HOST = None
 SERVER_PORT = None
 
 # Set the cache location
 cache = Cache('/mycachedir')
+
+def file_upload(file, directory, headers):
+    print "\n Uploading file ...\n"
+    transaction_sv.uploadT(file, directory, headers)
 
 
 def decrypt_data(key, hashed_val):
@@ -39,6 +44,11 @@ def decrypt_data(key, hashed_val):
 def server_instance():
     with application.app_context():
         return db.servers.find_one({"host": SERVER_HOST, "port": SERVER_PORT})
+
+def file_delete(file, directory, headers):
+    print "\n deleting file ...\n"
+    transaction_sv.del_transaction(file, directory, headers)
+
 
 
 @application.route('/file_uploader', methods=['POST'])
@@ -100,9 +110,79 @@ def file_uploader():
     print "\nSERVER_HOST = [ " + SERVER_HOST + " ]\n"
     print "\nSERVER_PORT = [ " + SERVER_PORT + " ]\n"
     print server_instance()
-
-
     return jsonify({'success': True})
+
+
+@application.route('/file_delete', methods=['POST'])
+def file_delete():
+    r_data = request.headers
+    r_head = r_data['directory']
+    file_name_encrypt = r_data['filename']
+    a_key = r_data['access_key']
+
+    period_id = decrypt_data(AUTH_KEY, a_key).strip()
+    decrypted_directory = decrypt_data(period_id, r_head)
+    decrypted_filename = decrypt_data(period_id, file_name_encrypt)
+
+    hash_key = hashlib.md5()
+    hash_key.update(decrypted_directory)
+
+    if not db.directories.find_one(
+            {"name": decrypted_directory, "identifier": hash_key.hexdigest(),
+             "server": server_instance()["identifier"]}):
+        print("No directory found")
+        return jsonify({"success": False})
+    else:
+        directory = db.directories.find_one(
+            {"name": decrypted_directory, "identifier": hash_key.hexdigest(),
+             "server": server_instance()["identifier"]})
+    file = db.files.find_one(
+        {"name": decrypted_filename, "directory": directory['identifier'], "server": server_instance()["identifier"]})
+    if not file:
+        print("No file found")
+        return jsonify({"success": False})
+
+    if (server_instance()["master_server"]):
+        thr = threading.Thread(target=file_delete, args=(file['identifier'], directory['identifier'], r_data),
+                               kwargs={})
+        thr.start()
+    return jsonify({'success': True})
+
+@application.route('/file/download', methods=['POST'])
+def file_download():
+    # data = request.get_json(force=True)
+    r_head = request.headers
+    encrypted_filename = r_head['filename']
+    encrypted_directory = r_head['directory']
+    a_key = r_head['access_key']
+
+    period_id = decrypt_data(AUTH_KEY, a_key).strip()
+    decrypted_directory = decrypt_data(period_id, encrypted_directory)
+    decrypted_filename = decrypt_data(period_id, encrypted_filename)
+
+    hash_key = hashlib.md5()
+    hash_key.update(decrypted_directory)
+
+    directory = db.directories.find_one(
+        {"name": decrypted_directory, "identifier": hash_key.hexdigest(), "server": server_instance()["identifier"]})
+    if not directory:
+        return jsonify({"success": False})
+
+    file = db.files.find_one(
+        {"name": decrypted_filename, "directory": directory['identifier'], "server": server_instance()["identifier"]})
+    if not file:
+        return jsonify({"success": False})
+
+    cache_hash = file['identifier'] + "/" + directory['identifier'] + "/" + server_instance()["identifier"]
+    if cache.get(cache_hash):
+        return cache.get(cache_hash)
+    else:
+        return flask.send_file(file['identifier'])
+
+
+
+
+
 if __name__ == '__main__':
     with application.app_context():
         for current_sv in db.servers.find():
