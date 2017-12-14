@@ -1,5 +1,5 @@
 import base64 #for encoding and decoding
-
+import hashlib
 from flask import request
 import json
 import random
@@ -11,6 +11,7 @@ from pymongo import MongoClient #for connecting to mongodb
 
 mongo_server = "localhost"
 mongo_port = "27017"
+hash_key = hashlib.md5()
 
 connect_str = "mongodb://" + mongo_server + ":" + mongo_port #creating connection with mongodb
 connection = MongoClient(connect_str)
@@ -22,6 +23,20 @@ req_database.filesystem_directories.drop()
 req_database.filesystem_files.drop()
 req_database.transactions.drop()
 
+hash_key.update("localhost" + ":" + "9001")
+req_database.servers.insert(
+    {"identifier": hash_key.hexdigest(), "host": "localhost", "port": "9001", "master_server": True, "in_use": False})
+
+hash_key.update("localhost" + ":" + "9002")
+req_database.servers.insert(
+    {"identifier": hash_key.hexdigest(), "host": "localhost", "port": "9002", "master_server": False, "in_use": False})
+
+hash_key.update("localhost" + ":" + "9002")
+req_database.servers.insert(
+    {"identifier": hash_key.hexdigest(), "host": "localhost", "port": "9003", "master_server": False, "in_use": False})
+
+application = Flask(__name__)
+
 app = Flask(__name__)
 AUTH_KEY = "qwerty123456789asdfghjkladitya12"
 
@@ -31,7 +46,7 @@ def user_creation():
 
     r_data = request.get_json(force=True)
 
-    p_key = "wqbdhbcjfeuw1234sajfknsdjkhj721q"
+    p_key = r_data.get('p_key')
     u_id = r_data.get('u_id')
     u_password = r_data.get('u_password')
 
@@ -53,12 +68,13 @@ def user_creation():
 @app.route('/user_login', methods=['POST'])
 def u_login():
 
-    u_info = req_database.filesystem_users.find_one({'u_id': u_id})
-    pass_encrypt = u_info['u_password']
-    p_key = u_info['p_key']
+
     req_data = request.get_json(force=True)
     u_password = req_data.get('u_password')
     u_id = req_data.get('u_id')
+    u_info = req_database.filesystem_users.find_one({'u_id': u_id})
+    pass_encrypt = u_info['u_password']
+    p_key = u_info['p_key']
 
     decrypted_u_password = AES.new(p_key, AES.MODE_ECB).decrypt(base64.b64decode(pass_encrypt)).strip()
 
