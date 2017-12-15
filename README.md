@@ -26,6 +26,10 @@ Email: bhatia@tcd.ie
 
 > Run user.py
 
+# authentication.py
+```
+This is the most important part of this project as when an user is added, it must have authentication in order
+to interact with the system.
 
 
 
