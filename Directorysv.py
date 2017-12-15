@@ -50,7 +50,6 @@ def file_delete(file, directory, headers):
     transaction_sv.del_transaction(file, directory, headers)
 
 
-
 @application.route('/file_uploader', methods=['POST'])
 def file_uploader():
     r_data = request.get_data()
