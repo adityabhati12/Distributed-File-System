@@ -23,13 +23,13 @@ mongo_port = "27017"
 str = "mongodb://" + mongo_server + ":" + mongo_port
 connection = MongoClient(str)
 db = connection.filesystem
-servers = db.servers
+servers = db.filesystem_servers
 server_transactions = transaction_sv()
-AUTH_KEY = "dnfsoeijrw93i09ndsn83irjfbsdu1q2"
+AUTH_KEY = "qwerty123456789asdfghjkladitya12"
 SERVER_HOST = None
 SERVER_PORT = None
 
-# Set the cache location
+# Setting the cache location
 cache = Cache('/mycachedir')
 
 def file_upload(file, directory, headers):
@@ -37,13 +37,13 @@ def file_upload(file, directory, headers):
     transaction_sv.uploadT(file, directory, headers)
 
 
-def decrypt_data(key, hashed_val):
+def decrypt_data(key, hashed_val): #decrypting the key
     decrypted_data = AES.new(key, AES.MODE_ECB).decrypt(base64.b64decode(hashed_val))
     return decrypted_data
 
 def server_instance():
     with application.app_context():
-        return db.servers.find_one({"host": SERVER_HOST, "port": SERVER_PORT})
+        return db.filesystem_servers.find_one({"host": SERVER_HOST, "port": SERVER_PORT})
 
 def file_delete(file, directory, headers):
     print "\n deleting file ...\n"
@@ -54,10 +54,10 @@ def file_delete(file, directory, headers):
 @application.route('/file_uploader', methods=['POST'])
 def file_uploader():
     r_data = request.get_data()
-    r_head = request.r_head
+    r_head = request.headers
     file_name_encrypt = r_head['filename']
     dir_encrypt = r_head['directory']
-    a_key = r_head['a_key'] #access Key
+    a_key = r_head['access_key'] #access Key
 
     perdiod_id = decrypt_data(AUTH_KEY, a_key).strip()
     dir_decrypt = decrypt_data(perdiod_id, dir_encrypt)
@@ -150,7 +150,6 @@ def file_delete():
 
 @application.route('/file/download', methods=['POST'])
 def file_download():
-    # data = request.get_json(force=True)
     r_head = request.headers
     encrypted_filename = r_head['filename']
     encrypted_directory = r_head['directory']
@@ -185,13 +184,13 @@ def file_download():
 
 if __name__ == '__main__':
     with application.app_context():
-        for current_sv in db.servers.find():
+        for current_sv in db.filesystem_servers.find():
             print(current_sv)
             if (current_sv['in_use'] == False):
                 current_sv['in_use'] = True
                 SERVER_PORT = current_sv['port']
                 SERVER_HOST = current_sv['host']
-                db.servers.update({'identifier': current_sv['identifier']}, current_sv, upsert=True)
+                db.filesystem_servers.update({'identifier': current_sv['identifier']}, current_sv, upsert=True)
                 application.run(host=current_sv['host'], port=current_sv['port'])
 
 
