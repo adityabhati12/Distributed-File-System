@@ -48,8 +48,15 @@ the current server.
 It is used for asychronous Transaction.
 ```
 
-# Transaction
-
+# transaction.py (Transaction)
+```
+Two main type of functions a present in this file upload and delete. if the file is updated by the user, the directory server will give the status "success" when a transaction is successfull. 
+```
+# Lock Service 
+```
+It has been to manage multiple thread locks  and for managing the trasactions done by the user. In the single thread should handle the 
+transaction to avoid deadlock.
+```
 
 
 
