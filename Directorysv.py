@@ -190,6 +190,6 @@ if __name__ == '__main__':
                 SERVER_PORT = current_sv['port']
                 SERVER_HOST = current_sv['host']
                 db.filesystem_servers.update({'identifier': current_sv['identifier']}, current_sv, upsert=True)
-                application.run(host=current_sv['host'], port=current_sv['port'])
+                application.run(host=current_sv['host'], port=int(current_sv['port']))
 
 
