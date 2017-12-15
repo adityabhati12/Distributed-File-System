@@ -7,17 +7,27 @@ Email: bhatia@tcd.ie
 
 -> Dependencies
 >Python 2.7
->Flask 0.12.2 - For REST API
->Mongodb
->diskcache
->Robomongo
->Postman
 
-###Installation 
-> run authentication.py
+>Flask 0.12.2 - For REST API
+
+>Mongodb
+
+>diskcache
+
+>pymongo 3.5.1
+
+>
+# Installation 
 > cmd terminal mongod
+
+> run authentication.py
+
 > Run Directorysv.py
-> Run Transaction.py
+
 > Run user.py
+
+
+
+
 
 
